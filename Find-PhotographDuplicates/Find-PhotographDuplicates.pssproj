@@ -29,7 +29,6 @@
   <ItemGroup>
     <Compile Include="Find-PhotographDuplicates.psd1" />
     <Compile Include="Find-PhotographDuplicates.psm1" />
-    <Compile Include="Find-PhotographDuplicates.tests.ps1" />
     <Compile Include="Runner.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

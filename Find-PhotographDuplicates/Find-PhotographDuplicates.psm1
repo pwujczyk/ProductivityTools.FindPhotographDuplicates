@@ -37,7 +37,7 @@ function GetDateAndTimeFromImage($photographPath)
 	catch
 	{
 		$FullDate=(Get-ChildItem $photographPath).BaseName
-		Write-Error "Date taken haven't been found, probably picture is image (doesn't have the date taken property) Name set as [$FullDate]"
+		Write-Error "Date taken haven't been found, probably picture is image (doesn't have the date taken property) Name set as [$FullDate] ($photographPath)"
 	}
 
 	$image.Dispose()
@@ -79,6 +79,8 @@ function LoadTable{
 	[cmdletbinding()]
 	param([string]$path)
 
+	Write-Verbose "Searching for Photographs in directory $path"
+
 	$photographDetailsArray=@()
 
 	$items=Get-ChildItem -Path $path -Recurse -Filter *.jpg | select FullName
@@ -91,7 +93,7 @@ function LoadTable{
 		$photographDetails.size=GetPhotographSize -photographPath $photographDetails.path
 		$photographDetails.fileBaseName=GetPhotographFileBaseName -photographPath $photographDetails.path
 		$photographDetails.extension=GetPhotographExtension -photographPath $photographDetails.path
-		Write-Verbose "Found photograph DateTaken: $($photographDetails.dateTaken), Size: $($photographDetails.size), FileName $($photographDetails.fileBaseName)  Extension $($photographDetails.extension)"
+		Write-Verbose "Found photograph in directory $($photographDetails.path). DateTaken: $($photographDetails.dateTaken), Size: $($photographDetails.size), FileName $($photographDetails.fileBaseName),  Extension $($photographDetails.extension)"
 		$photographDetailsArray+=$photographDetails
 	}
 
@@ -101,6 +103,8 @@ function LoadTable{
 function CompareTables{
 	[cmdletbinding()]
 	param($MasterTable,$SlaveTable,[switch]$CompareSize,[switch]$CompareFileName)
+
+	Write-Verbose "Comparing Photographs"
 	
 	$duplicatesFromSlaveTable=@()
 
@@ -113,20 +117,16 @@ function CompareTables{
 			[bool]$nameEqual=$false
 			if ($master.dateTaken -eq $slave.dateTaken)
 			{
-				Write-Verbose "master $($master.Path) DateTaken:$($master.dateTaken) slave $($slave.Path) DateTaken:$($slave.dateTaken)"
 				$dateTimeEqual=$true
 			}
 
 			if ($CompareSize.IsPresent -and $master.size -eq $slave.size)
 			{
-				
-				Write-Verbose "master Size:$($master.size) slave Size:$($slave.size)"
 				$sizeEqual=$true
 			}
 
 			if($CompareFileName.IsPresent -and $master.fileBaseName -eq $slave.fileBaseName)
 			{
-				Write-Verbose "master FileName:$($master.fileBaseName) slave FileName:$($slave.fileBaseName)"
 				$nameEqual=$true
 			}
 
@@ -134,7 +134,7 @@ function CompareTables{
 			($CompareSize.IsPresent -eq $false -or $sizeEqual -eq $true) -and
 			($CompareFileName.IsPresent -eq $false -or $nameEqual -eq $true))
 			{
-				Write-Verbose "Compared by DateTaken: True, Size: $($CompareSize.IsPresent) FileName $($CompareFileName.IsPresent)"
+				Write-Verbose "File $($slave.Path) the same as $($master.Path). Compared by DateTaken: True, Size: $($CompareSize.IsPresent) FileName $($CompareFileName.IsPresent)"
 				$duplicate=New-Object Duplicate
 				$duplicate.master=$master
 				$duplicate.slave=$slave
@@ -155,7 +155,7 @@ function CopyFilesToResultDirectory{
 	}
 	else
 	{
-		New-Item -Path $resultDirectory -ItemType directory 
+		New-Item -Path $resultDirectory -ItemType directory |Out-Null
 	}
 
 	[int]$id=0;
@@ -186,7 +186,7 @@ function CopyFilesToResultDirectory{
 
 function ProcessDuplicates{
 	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$resultDirectory)
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$resultDirectory,[switch]$DeleteSlaveDuplicates)
 
 	$masterTable=LoadTable $PathMaster
 	$slaveTable=LoadTable $PathSlave
@@ -197,17 +197,52 @@ function ProcessDuplicates{
 	{
 		CopyFilesToResultDirectory -duplicatesFromSlaveTable $duplicatesFromSlaveTable -resultDirectory $resultDirectory -compareFileName:$CompareFileName
 	}
-	$result=$duplicatesFromSlaveTable |% {$_.slave.path}
+
+	if($DeleteSlaveDuplicates.IsPresent)
+	{
+		foreach($duplicate in $duplicatesFromSlaveTable)
+		{
+			$path=$duplicate.slave.path
+			Remove-Item -LiteralPath $path -Force
+		}
+	}
+
+	$result=$duplicatesFromSlaveTable |ForEach-Object {$_.slave.path}
 	return $result
 }
 
 function Find-PhotographDuplicates {
 	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory)
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory,[switch]$DeleteSlaveDuplicates)
 
 	Write-Verbose "Loading system drawing assembly"
 	[reflection.assembly]::loadfile( "C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Drawing.dll") |Out-Null
 
-	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory
+	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicates
 	return $result
 }
+
+function ProcessDuplicatesInDirectory
+{
+	[cmdletbinding()]
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$Path)
+
+}
+
+function Find-PhotographDuplicatesInDirectory {
+	[cmdletbinding()]
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$Path)
+
+	$photoTable=LoadTable $Path
+	foreach($firstElement in $photoTable)
+	{
+		foreach($secondElement in $photoTable)
+		{
+			
+		}
+	}
+
+	
+}
+
+Export-ModuleMember Find-PhotographDuplicates
