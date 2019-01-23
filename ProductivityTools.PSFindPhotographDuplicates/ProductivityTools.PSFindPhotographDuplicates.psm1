@@ -49,7 +49,7 @@ function GetPhotographSize{
 	[cmdletbinding()]
 	param([string]$photographPath)
 	
-	$file=Get-ChildItem $photographPath
+	$file=Get-ChildItem -LiteralPath $photographPath
 	$size=$file.Length
 	return $size;
 }
@@ -59,7 +59,7 @@ function GetPhotographFileBaseName{
 	[cmdletbinding()]
 	param([string]$photographPath)
 
-	$file=Get-ChildItem $photographPath
+	$file=Get-ChildItem -LiteralPath $photographPath
 	$fileName=$file.BaseName
 	return $fileName
 }
@@ -69,7 +69,7 @@ function GetPhotographExtension{
 	[cmdletbinding()]
 	param([string]$photographPath)
 
-	$file=Get-ChildItem $photographPath
+	$file=Get-ChildItem -LiteralPath $photographPath
 	$extension=$file.Extension
 	return $extension
 }
@@ -195,16 +195,28 @@ function ProcessDuplicates{
 
 	if ([string]::IsNullOrEmpty($resultDirectory) -eq $false)
 	{
+		Write-Verbose "Result Directory is present, copying files to result directory"
 		CopyFilesToResultDirectory -duplicatesFromSlaveTable $duplicatesFromSlaveTable -resultDirectory $resultDirectory -compareFileName:$CompareFileName
 	}
+	else
+	{
+		Write-Verbose "ResultDirectory is not present"
+	}
 
+	
 	if($DeleteSlaveDuplicates.IsPresent)
 	{
+		Write-Verbose "DeleteSlaveDuplicate is present, removing files"
 		foreach($duplicate in $duplicatesFromSlaveTable)
 		{
 			$path=$duplicate.slave.path
-			Remove-Item -LiteralPath $path -Force
+			Write-Verbose "Removing $path"
+			Remove-Item -LiteralPath $path -Force -Verbose
 		}
+	}
+	else
+	{
+		Write-Verbose "DeleteSlaveDuplicate is not present not deleting"
 	}
 
 	$result=$duplicatesFromSlaveTable |ForEach-Object {$_.slave.path}
@@ -213,12 +225,12 @@ function ProcessDuplicates{
 
 function Find-PhotographDuplicates {
 	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory,[switch]$DeleteSlaveDuplicates)
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory,[switch]$DeleteSlaveDuplicatess)
 
 	Write-Verbose "Loading system drawing assembly"
 	[reflection.assembly]::loadfile( "C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Drawing.dll") |Out-Null
 
-	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicates
+	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicatess
 	return $result
 }
 
