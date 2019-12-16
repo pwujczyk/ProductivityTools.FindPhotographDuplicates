@@ -223,12 +223,17 @@ function ProcessDuplicates{
 	return $result
 }
 
+function LoadSystemDrawing()
+{
+	Write-Verbose "Loading system drawing assembly"
+	[reflection.assembly]::loadfile( "C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Drawing.dll") |Out-Null
+}
+
 function Find-PhotographDuplicates {
 	[cmdletbinding()]
 	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory,[switch]$DeleteSlaveDuplicatess)
 
-	Write-Verbose "Loading system drawing assembly"
-	[reflection.assembly]::loadfile( "C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Drawing.dll") |Out-Null
+	LoadSystemDrawing
 
 	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicatess
 	return $result
@@ -241,20 +246,68 @@ function ProcessDuplicatesInDirectory
 
 }
 
+function GenerateKey {
+
+	[cmdletbinding()]
+	param($photo,[switch]$CompareSize,[switch]$CompareFileName)
+	
+	$key = $photo.DateTaken
+	if ($CompareSize.IsPresent)
+	{
+		$key+=$photo.Size
+	}
+	if ($CompareFileName.IsPresent)
+	{
+		$key+=$photo.FileName
+	}
+	return $key
+}
+
 function Find-PhotographDuplicatesInDirectory {
 	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$Path)
+	param([switch]$CompareSize,[switch]$CompareFileName,[string]$Path, [string]$ResultDirectory,[switch]$DeleteDuplicates)
 
-	$photoTable=LoadTable $Path
-	foreach($firstElement in $photoTable)
-	{
-		foreach($secondElement in $photoTable)
-		{
-			
-		}
-	}
-
+	LoadSystemDrawing
 	
+	$photoTable=LoadTable $Path
+	
+	$uniqueElements=@{}
+	
+	$id=0
+	foreach($photo in $photoTable)
+	{
+		Write-Progress -Activity "Process found photographs" 
+		$key=GenerateKey $photo -CompareSize:$CompareSize -CompareFileName:$CompareFileName
+		if ($uniqueElements.ContainsKey($key))
+		{			
+			Write-Verbose "Found duplicate"
+			Write-Verbose "$($uniqueElements[$key])"
+			Write-Verbose "$($photo.path)"
+			$pathToDuplicate=$uniqueElements[$key]
+			$photoFullname=$($photo.Path)
+			Write-Verbose "Duplicate found $photoFullname"
+			if ($ResultDirectory -ne "")
+			{
+				$resultPathFirst="$ResultDirectory\$id" + "_fristPhoto"+$($photo.Extension)
+				$resultPathSecond="$ResultDirectory\$id" +"_secondPhoto"+$($photo.Extension)
+				Copy-Item -Path $photoFullname -Destination $resultPathFirst
+				Copy-Item -Path $photoFullname -Destination $resultPathSecond
+			}
+			
+			if ($DeleteDuplicates.IsPresent)
+			{
+
+				Write-Verbose "Removing duplicate $photoFullname"
+				Remove-Item $photoFullname
+			}
+		}
+		else
+		{
+			$uniqueElements.Add($key, $($photo.Path))
+		}
+		$id++;
+	}
 }
 
 Export-ModuleMember Find-PhotographDuplicates
+Export-ModuleMember Find-PhotographDuplicatesInDirectory
