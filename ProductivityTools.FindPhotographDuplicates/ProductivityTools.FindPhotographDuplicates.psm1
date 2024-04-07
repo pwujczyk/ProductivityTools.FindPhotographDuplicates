@@ -145,9 +145,9 @@ function CompareTables{
 	return $duplicatesFromSlaveTable
 }
 
-function CopyFilesToResultDirectory{
-	[cmdletbinding()]
-	param($duplicatesFromSlaveTable,[string]$resultDirectory,[switch]$compareFileName)
+function CreateResultDirectory{
+	[CmdletBinding()]
+	param([string]$resultDirectory)
 
 	If (Test-Path -Path $resultDirectory -PathType Container)
 	{
@@ -157,6 +157,13 @@ function CopyFilesToResultDirectory{
 	{
 		New-Item -Path $resultDirectory -ItemType directory |Out-Null
 	}
+}
+
+function CopyFilesToResultDirectory{
+	[cmdletbinding()]
+	param($duplicatesFromSlaveTable,[string]$resultDirectory,[switch]$compareFileName)
+
+	CreateResultDirectory -resultDirectory $resultDirectory
 
 	[int]$id=0;
 	foreach($duplicate in $duplicatesFromSlaveTable)
@@ -268,6 +275,7 @@ function Find-PhotographDuplicatesInDirectory {
 	param([switch]$CompareSize,[switch]$CompareFileName,[string]$Path, [string]$ResultDirectory,[switch]$DeleteDuplicates)
 
 	LoadSystemDrawing
+	CreateResultDirectory -resultDirectory $ResultDirectory
 	
 	$photoTable=LoadTable $Path
 	
