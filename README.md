@@ -28,6 +28,8 @@ Find-PhotographDuplicates -CompareSize -CompareFileName -PathMaster e:\PhotoPris
 - Path Slave - directory where we expect to have duplicates. As a result of this script photos from this directory will be deleted.
 - Result directory - script compares the photos from two directories if duplicate is found it copies both files to the result directory, one photo has suffix _master the second _slave. You can then validate if photos are the same
 
+If you provide directory that contains other directories script will process all images recursive. 
+
 ![](Images/2024-02-17-11-39-47.png)
 
 ![](Images/2024-02-17-11-41-10.png)
