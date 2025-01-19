@@ -233,7 +233,7 @@ function ProcessDuplicates{
 function LoadSystemDrawing()
 {
 	Write-Verbose "Loading system drawing assembly"
-	[reflection.assembly]::loadfile( "C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Drawing.dll") |Out-Null
+	[reflection.assembly]::loadfile( "c:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Drawing.dll") |Out-Null
 }
 
 function Find-PhotographDuplicates {
