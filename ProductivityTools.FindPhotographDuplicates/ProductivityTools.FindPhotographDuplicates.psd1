@@ -24,7 +24,7 @@ Author = 'Pawel Wujczyk'
 Description = 'It finds all photographs in the master and the slave directory, after this it compares them by date and time taken and optionally by size and name. It can then remove all duplicates or return paths to duplicates. Before removing pictures can be checked in compare directory'
 
 # Functions to export from this module
-FunctionsToExport = @('Find-PhotographDuplicates','Find-PhotographDuplicatesInDirectory')
+FunctionsToExport = @('Find-PhotographDuplicates','Find-PhotographDuplicatesInDirectory','Prepare-PhotographDuplicateFile')
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess
 # PrivateData = ''
@@ -36,4 +36,3 @@ FunctionsToExport = @('Find-PhotographDuplicates','Find-PhotographDuplicatesInDi
 # DefaultCommandPrefix = ''
 
 }
-

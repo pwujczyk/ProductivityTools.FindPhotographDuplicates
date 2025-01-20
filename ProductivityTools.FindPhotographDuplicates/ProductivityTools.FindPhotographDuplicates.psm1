@@ -317,5 +317,31 @@ function Find-PhotographDuplicatesInDirectory {
 	}
 }
 
+function Prepare-PhotographDuplicateFile {
+	[cmdletbinding()]
+	param(
+		[Parameter(Mandatory=$true, ValueFromPipeline=$true, HelpMessage="Path to the directory containing photographs.")]
+		[string]$Path
+	)
+
+	LoadSystemDrawing # Ensure System.Drawing is loaded, as LoadTable indirectly uses it.
+
+	Write-Verbose "Preparing photograph data from path: $Path"
+	$photographData = LoadTable -Path $Path
+
+	if ($photographData -and $photographData.Count -gt 0) {
+		$outputFileName = "$Path\PhotographDuplicateCompareFile.txt"
+		Write-Verbose "Saving photograph data to $outputFileName (current directory)"
+		$photographData | ConvertTo-Csv -NoTypeInformation | Out-File -FilePath $outputFileName -Encoding UTF8
+		Write-Host "Photograph data for $($photographData.Count) items saved to $outputFileName"
+	} else {
+		Write-Warning "No photograph data found or generated from path: $Path. '$outputFileName' was not created."
+	}
+}
+
+
+
+
 Export-ModuleMember Find-PhotographDuplicates
 Export-ModuleMember Find-PhotographDuplicatesInDirectory
+Export-ModuleMember Prepare-PhotographDuplicateFile
