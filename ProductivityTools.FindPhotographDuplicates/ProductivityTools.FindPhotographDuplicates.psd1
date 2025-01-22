@@ -12,7 +12,7 @@
 RootModule = 'ProductivityTools.FindPhotographDuplicates.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.0.13'
+ModuleVersion = '0.0.14'
 
 # ID used to uniquely identify this module
 GUID = 'b180fb80-d09b-46fb-b69f-2cb9e7105564'
