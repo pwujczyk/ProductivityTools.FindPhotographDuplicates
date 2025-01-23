@@ -100,6 +100,35 @@ function LoadTable{
 	return $photographDetailsArray
 }
 
+function Load-PhotographDataFromFile {
+	[cmdletbinding()]
+	param(
+		[Parameter(Mandatory=$true)]
+		[string]$FilePath
+	)
+
+	Write-Verbose "Loading photograph data from CSV file: $FilePath"
+	try {
+		$importedData = Import-Csv -Path $FilePath
+		$photographDetailsArray = @()
+		foreach ($row in $importedData) {
+			$details = [PhotographDetails]::new()
+			$details.path = $row.path
+			$details.dateTaken = $row.dateTaken
+			# Ensure 'size' is converted to integer, as Import-Csv might read it as string
+			$details.size = [int]$row.size 
+			$details.fileBaseName = $row.fileBaseName
+			$details.extension = $row.extension
+			$photographDetailsArray += $details
+		}
+		return $photographDetailsArray
+	}
+	catch {
+		Write-Error "Failed to load or parse photograph data from '$FilePath'. Error: $($_.Exception.Message)"
+		throw "Failed to load master data from file '$FilePath'." # Re-throw to stop execution in ProcessDuplicates
+	}
+}
+
 function CompareTables{
 	[cmdletbinding()]
 	param($MasterTable,$SlaveTable,[switch]$CompareSize,[switch]$CompareFileName)
@@ -193,11 +222,31 @@ function CopyFilesToResultDirectory{
 
 function ProcessDuplicates{
 	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$resultDirectory,[switch]$DeleteSlaveDuplicates)
+	param(
+		[switch]$CompareSize,
+		[switch]$CompareFileName,
+		[string]$PathMaster,
+		[string]$PathMasterDuplicateFile, # New parameter
+		[string]$PathSlave,
+		[string]$resultDirectory,
+		[switch]$DeleteSlaveDuplicates
+	)
 
-	$masterTable=LoadTable $PathMaster
+	$masterTable = $null
+	if (-not [string]::IsNullOrEmpty($PathMasterDuplicateFile)) {
+        if (Test-Path -LiteralPath $PathMasterDuplicateFile -PathType Leaf) {
+            Write-Verbose "Loading master table from file: $PathMasterDuplicateFile"
+            $masterTable = Load-PhotographDataFromFile -FilePath $PathMasterDuplicateFile
+        } else {
+            throw "Master duplicate file specified ('$PathMasterDuplicateFile') but not found or is not a file."
+        }
+    } elseif (-not [string]::IsNullOrEmpty($PathMaster)) {
+        Write-Verbose "Loading master table from directory: $PathMaster"
+        $masterTable = LoadTable $PathMaster
+    } else {
+        throw "Internal error: Neither -PathMaster nor -PathMasterDuplicateFile was effectively provided to ProcessDuplicates."
+    }
 	$slaveTable=LoadTable $PathSlave
-
 	$duplicatesFromSlaveTable=CompareTables -MasterTable $masterTable -SlaveTable $slaveTable -CompareSize:$CompareSize -CompareFileName:$CompareFileName
 
 	if ([string]::IsNullOrEmpty($resultDirectory) -eq $false)
@@ -237,12 +286,38 @@ function LoadSystemDrawing()
 }
 
 function Find-PhotographDuplicates {
-	[cmdletbinding()]
-	param([switch]$CompareSize,[switch]$CompareFileName,[string]$PathMaster,[string]$PathSlave,[string]$ResultDirectory,[switch]$DeleteSlaveDuplicatess)
+	[cmdletbinding(DefaultParameterSetName='PathInput')]
+	param(
+		[Parameter(ParameterSetName='PathInput')]
+		[Parameter(ParameterSetName='FileInput')]
+		[switch]$CompareSize,
+
+		[Parameter(ParameterSetName='PathInput')]
+		[Parameter(ParameterSetName='FileInput')]
+		[switch]$CompareFileName,
+
+		[Parameter(Mandatory=$true, ParameterSetName='PathInput', HelpMessage="Path to the master directory of photographs.")]
+		[string]$PathMaster,
+
+		[Parameter(Mandatory=$true, ParameterSetName='FileInput', HelpMessage="Path to the file containing master photograph data (e.g., from Prepare-PhotographDuplicateFile).")]
+		[string]$PathMasterDuplicateFile,
+
+		[Parameter(Mandatory=$true, ParameterSetName='PathInput')]
+		[Parameter(Mandatory=$true, ParameterSetName='FileInput')]
+		[string]$PathSlave,
+
+		[Parameter(ParameterSetName='PathInput')]
+		[Parameter(ParameterSetName='FileInput')]
+		[string]$ResultDirectory,
+
+		[Parameter(ParameterSetName='PathInput')]
+		[Parameter(ParameterSetName='FileInput')]
+		[switch]$DeleteSlaveDuplicatess
+	)
 
 	LoadSystemDrawing
 
-	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicatess
+	$result=ProcessDuplicates -CompareSize:$CompareSize -CompareFileName:$CompareFileName -PathMaster $PathMaster -PathMasterDuplicateFile $PathMasterDuplicateFile -PathSlave $PathSlave -resultDirectory $ResultDirectory -DeleteSlaveDuplicates:$DeleteSlaveDuplicatess
 	return $result
 }
 

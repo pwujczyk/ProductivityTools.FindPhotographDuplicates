@@ -8,4 +8,5 @@ Import-Module .\ProductivityTools.FindPhotographDuplicates.psm1 -Force
 #Find-PhotographDuplicatesInDirectory -Path d:\Photographs\processing2\ -CompareSize -ResultDirectory "d:\Trash\a1" -Verbose
 
 
-Prepare-PhotographDuplicateFile -Verbose -Path "d:\Photographs\Wyjazd krakow\"
+#Prepare-PhotographDuplicateFile -Verbose -Path "d:\Photographs\Wyjazd krakow\"
+Find-PhotographDuplicates -PathMasterDuplicateFile "d:\Photographs\Wyjazd krakow\PhotographDuplicateCompareFile.txt" -PathSlave D:\Trash\Wyjazd_trash -CompareSize -CompareFileName -DeleteSlaveDuplicatess
